@@ -1,102 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Unlocker</title>
   <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tailwindcss.js"></script>
   <!-- PDF.js and jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="pdf.js"></script>
+  <script src="jspdf.js"></script>
   <!-- Google Fonts: Roboto -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="fonts.css" rel="stylesheet">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+
+    :root {
+      --primary: #1a73e8;
+      --primary-hover: #1765cc;
+      --bg-gradient: radial-gradient(at 0% 0%, hsla(210, 40%, 98%, 1) 0, transparent 50%),
+        radial-gradient(at 100% 100%, hsla(210, 40%, 94%, 1) 0, transparent 50%);
+    }
+
     body {
-      font-family: 'Roboto', sans-serif;
-      background-color: #f8f9fa; /* Google's light gray background */
+      font-family: 'Inter', sans-serif;
+      background-color: #f8faff;
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
       color: #202124;
+      min-height: 100vh;
     }
+
+    h1,
+    h2,
+    h3,
+    .font-outfit {
+      font-family: 'Outfit', sans-serif;
+    }
+
     .google-btn {
-      background-color: #1a73e8;
+      background-color: var(--primary);
       color: white;
-      transition: background-color 0.2s, box-shadow 0.2s;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      box-shadow: 0 1px 3px rgba(26, 115, 232, 0.2);
     }
+
     .google-btn:hover {
-      background-color: #1b66c9;
-      box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+      background-color: var(--primary-hover);
+      box-shadow: 0 4px 6px rgba(26, 115, 232, 0.3);
+      transform: translateY(-1px);
     }
-    .google-btn:active {
-      background-color: #185abc;
-    }
+
     .google-btn-outline {
       border: 1px solid #dadce0;
-      color: #1a73e8;
-      background-color: transparent;
-      transition: background-color 0.2s;
+      color: var(--primary);
+      background-color: white;
+      transition: all 0.2s ease;
     }
+
     .google-btn-outline:hover {
-      background-color: #f8f9fa;
+      background-color: #f8faff;
+      border-color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
+
     .google-card {
-      background-color: #fff;
-      border: 1px solid #dadce0;
-      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     }
+
     .google-input {
       border: 1px solid #dadce0;
-      border-radius: 4px;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      background: white;
     }
+
     .google-input:focus {
-      border-color: #1a73e8;
+      border-color: var(--primary);
       outline: none;
-      box-shadow: inset 0 0 0 1px #1a73e8;
+      box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
     }
+
+    .drop-zone {
+      border: 2px dashed #dadce0;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .drop-zone:hover,
     .drop-zone-active {
-      border-color: #1a73e8 !important;
-      background-color: #e8f0fe !important;
+      border-color: var(--primary) !important;
+      background-color: #f1f7ff !important;
+      transform: scale(1.005);
     }
-    /* Simple spinner */
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
+
     .spinner {
       animation: spin 1s linear infinite;
     }
-    /* Toast styles */
+
     #toastContainer {
       position: fixed;
-      bottom: 24px;
+      bottom: 32px;
       left: 50%;
       transform: translateX(-50%) translateY(100px);
       opacity: 0;
-      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-      z-index: 50;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 100;
       pointer-events: none;
     }
+
     #toastContainer.show {
       transform: translateX(-50%) translateY(0);
       opacity: 1;
     }
 
-    /* Hide scrollbar for neatness */
+    /* Password eye toggle visibility */
+    .password-eye {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+
+    #passwordInput:focus~.password-eye,
+    .password-eye:hover {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     ::-webkit-scrollbar {
       width: 8px;
-      height: 8px;
     }
+
     ::-webkit-scrollbar-track {
-      background: #f1f1f1; 
+      background: transparent;
     }
+
     ::-webkit-scrollbar-thumb {
-      background: #c1c1c1; 
-      border-radius: 4px;
+      background: #dadce0;
+      border-radius: 10px;
     }
+
     ::-webkit-scrollbar-thumb:hover {
-      background: #a8a8a8; 
+      background: #bdc1c6;
     }
   </style>
 </head>
+
 <body class="min-h-screen flex flex-col">
 
   <!-- Header -->
@@ -104,16 +183,42 @@
     <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <!-- Material Lock Icon -->
-        <svg class="w-6 h-6 text-[#1a73e8]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+        <svg class="w-6 h-6 text-[#1a73e8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+          </path>
         </svg>
         <span class="text-xl font-medium text-gray-700 tracking-tight">PDF Unlocker</span>
       </div>
       <div>
-        <button onclick="downloadApp()" class="google-btn-outline px-4 py-2 rounded font-medium text-sm flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          Save App Offline
-        </button>
+        <div id="saveOfflineContainer" class="flex items-center gap-2">
+          <button id="saveOfflineBtn" onclick="initiateOfflineSave()"
+            class="google-btn-outline px-4 py-2 rounded font-medium text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            Save App Offline
+          </button>
+          <div id="offlineInputGroup" class="hidden flex items-center gap-2 animate-fade-in">
+            <input type="text" id="appNameInput" placeholder="App Name"
+              class="google-input px-3 py-2 text-sm w-44 shadow-sm" value="unlock_your_pdf">
+            <div class="flex items-center gap-1">
+              <button onclick="confirmOfflineSave()" class="google-btn px-4 py-2 rounded font-medium text-sm shadow-sm"
+                title="Download app files">
+                Download
+              </button>
+              <button onclick="discardOfflineSave()"
+                class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Discard">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -121,51 +226,62 @@
   <!-- Main Content -->
   <main class="flex-grow flex flex-col items-center p-4 sm:p-8">
     <div class="w-full max-w-2xl">
-      
+
       <!-- Privacy Banner -->
       <div class="bg-[#e8f0fe] rounded-lg p-4 mb-6 flex items-start gap-3">
         <svg class="w-5 h-5 text-[#1a73e8] mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+          <path fill-rule="evenodd"
+            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+            clip-rule="evenodd" />
         </svg>
         <p class="text-sm text-[#1967d2] leading-relaxed">
-          <strong>100% Private & Offline.</strong> Your file never leaves your device. All processing is done locally in your browser.
+          <strong>100% Private & Offline.</strong> Your file never leaves your device. All processing is done locally in
+          your browser.
         </p>
       </div>
 
       <!-- Main Card -->
       <div class="google-card p-6 sm:p-8 space-y-8">
-        
+
         <!-- Step 1: Upload -->
         <div>
           <h2 class="text-lg font-medium mb-3 flex items-center gap-2">
-            <span class="w-6 h-6 rounded-full bg-blue-100 text-[#1a73e8] flex items-center justify-center text-sm font-bold">1</span>
+            <span
+              class="w-6 h-6 rounded-full bg-blue-100 text-[#1a73e8] flex items-center justify-center text-sm font-bold">1</span>
             Select PDF
           </h2>
           <div id="dropZone"
-               class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-               onclick="document.getElementById('fileInput').click()"
-               ondragover="handleDragOver(event)"
-               ondragleave="handleDragLeave(event)"
-               ondrop="handleDrop(event)">
-            <input type="file" id="fileInput" accept=".pdf" class="hidden" onchange="handleFileSelect(event)"/>
+            class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+            onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)"
+            ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+            <input type="file" id="fileInput" accept=".pdf" class="hidden" onchange="handleFileSelect(event)" />
             <svg class="w-10 h-10 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
             </svg>
             <p class="text-gray-600 font-medium">Drag & drop a file here</p>
             <p class="text-gray-400 text-sm mt-1">or click to browse from your device</p>
           </div>
-          
+
           <!-- File Info display -->
-          <div id="fileInfo" class="hidden mt-3 p-3 bg-gray-50 border border-gray-200 rounded flex items-center justify-between">
+          <div id="fileInfo"
+            class="hidden mt-3 p-3 bg-gray-50 border border-gray-200 rounded flex items-center justify-between">
             <div class="flex items-center gap-3 overflow-hidden">
-              <svg class="w-6 h-6 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM12 17H8v-2h4v2zm4-4H8v-2h8v2z"/></svg>
+              <svg class="w-6 h-6 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path
+                  d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM12 17H8v-2h4v2zm4-4H8v-2h8v2z" />
+              </svg>
               <div class="truncate">
                 <p id="fileName" class="text-sm font-medium text-gray-800 truncate"></p>
                 <p id="fileSize" class="text-xs text-gray-500"></p>
               </div>
             </div>
-            <button onclick="resetFile()" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors" title="Remove file">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <button onclick="resetFile()"
+              class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+              title="Remove file">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>
@@ -173,22 +289,30 @@
         <!-- Step 2: Password -->
         <div>
           <h2 class="text-lg font-medium mb-3 flex items-center gap-2">
-            <span class="w-6 h-6 rounded-full bg-blue-100 text-[#1a73e8] flex items-center justify-center text-sm font-bold">2</span>
+            <span
+              class="w-6 h-6 rounded-full bg-blue-100 text-[#1a73e8] flex items-center justify-center text-sm font-bold">2</span>
             Enter Password
           </h2>
           <div class="relative">
             <input type="password" id="passwordInput" placeholder="Password for the PDF"
-                   class="google-input w-full px-4 py-3 text-sm" />
-            <button class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                    onclick="togglePassword()" title="Toggle visibility" type="button">
+              class="google-input w-full px-4 py-3 text-sm" />
+            <button
+              class="password-eye absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
+              onclick="togglePassword()" title="Toggle visibility" type="button">
               <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
             </button>
           </div>
           <p id="passwordError" class="hidden text-red-600 text-xs mt-1.5 flex items-center gap-1">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd" />
+            </svg>
             <span id="passwordErrorText"></span>
           </p>
         </div>
@@ -196,25 +320,30 @@
         <!-- Step 3: Output Name -->
         <div>
           <h2 class="text-lg font-medium mb-3 flex items-center gap-2">
-            <span class="w-6 h-6 rounded-full bg-blue-100 text-[#1a73e8] flex items-center justify-center text-sm font-bold">3</span>
+            <span
+              class="w-6 h-6 rounded-full bg-blue-100 text-[#1a73e8] flex items-center justify-center text-sm font-bold">3</span>
             Save As
           </h2>
           <div class="flex items-center gap-0">
             <input type="text" id="outputName" placeholder="Filename"
-                   class="google-input w-full px-4 py-3 text-sm rounded-r-none border-r-0"
-                   oninput="updatePreview()"/>
-            <div class="bg-gray-50 border border-gray-300 border-l-0 rounded-r text-gray-500 px-4 py-3 text-sm whitespace-nowrap">
+              class="google-input w-full px-4 py-3 text-sm rounded-r-none border-r-0" oninput="updatePreview()" />
+            <div
+              class="bg-gray-50 border border-gray-300 border-l-0 rounded-r text-gray-500 px-4 py-3 text-sm whitespace-nowrap">
               _unlocked.pdf
             </div>
           </div>
-          <p class="text-gray-500 text-xs mt-1.5 pl-1">Will be saved as: <span id="filenamePreview" class="font-medium text-gray-700">_unlocked.pdf</span></p>
+          <p class="text-gray-500 text-xs mt-1.5 pl-1">Will be saved as: <span id="filenamePreview"
+              class="font-medium text-gray-700">_unlocked.pdf</span></p>
         </div>
 
         <!-- Action Button -->
         <div class="pt-4 border-t border-gray-100">
           <button id="unlockBtn" onclick="unlockPDF()"
-                  class="google-btn w-full py-3 rounded-md font-medium text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+            class="google-btn w-full py-3 rounded-md font-medium text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            </svg>
             Unlock PDF
           </button>
         </div>
@@ -230,7 +359,8 @@
             <span class="text-sm font-bold text-[#1a73e8]" id="progressPct">0%</span>
           </div>
           <div class="w-full bg-gray-200 rounded-full h-1.5 mb-2 overflow-hidden">
-            <div id="progressBar" class="bg-[#1a73e8] h-1.5 rounded-full transition-all duration-300" style="width:0%"></div>
+            <div id="progressBar" class="bg-[#1a73e8] h-1.5 rounded-full transition-all duration-300" style="width:0%">
+            </div>
           </div>
           <div class="flex items-center gap-2 text-xs text-gray-500">
             <svg class="w-4 h-4 spinner text-[#1a73e8]" fill="none" viewBox="0 0 24 24">
@@ -242,23 +372,35 @@
         </div>
 
         <!-- Success -->
-        <div id="successCard" class="hidden google-card border-green-200 bg-green-50 p-6 flex-col sm:flex-row gap-4 items-start sm:items-center">
-          <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 text-green-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div id="successCard"
+          class="hidden google-card border-green-200 bg-green-50 p-6 flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <div
+            class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 text-green-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
           <div class="flex-1">
             <h3 class="text-green-800 font-medium text-base">Unlocked Successfully!</h3>
             <p class="text-green-700 text-sm mt-0.5">Your file <strong id="successFileName"></strong> is ready.</p>
           </div>
-          <button onclick="downloadFile()" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded font-medium text-sm transition-colors flex justify-center items-center gap-2">
-             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <button onclick="downloadFile()"
+            class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded font-medium text-sm transition-colors flex justify-center items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
             Download
           </button>
         </div>
 
         <!-- General Error -->
         <div id="errorCard" class="hidden google-card border-red-200 bg-red-50 p-4 flex items-start gap-3">
-          <svg class="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+          <svg class="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clip-rule="evenodd" />
+          </svg>
           <div>
             <h4 class="text-red-800 font-medium text-sm">Error</h4>
             <p id="errorText" class="text-red-700 text-sm mt-0.5"></p>
@@ -274,32 +416,94 @@
   </footer>
 
   <!-- Toast Notification Container -->
-  <div id="toastContainer" class="bg-gray-800 text-white px-6 py-3 rounded shadow-lg flex items-center gap-3 text-sm font-medium">
-    <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+  <div id="toastContainer"
+    class="bg-gray-800 text-white px-6 py-3 rounded shadow-lg flex items-center gap-3 text-sm font-medium">
+    <svg class="w-5 h-5 text-blue-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink" fill="currentColor" version="1.1" id="Capa_1" width="800px"
+      height="800px" viewBox="0 0 416.979 416.979" xml:space="preserve">
+      <g>
+        <path
+          d="M356.004,61.156c-81.37-81.47-213.377-81.551-294.848-0.182c-81.47,81.371-81.552,213.379-0.181,294.85   c81.369,81.47,213.378,81.551,294.849,0.181C437.293,274.636,437.375,142.626,356.004,61.156z M237.6,340.786   c0,3.217-2.607,5.822-5.822,5.822h-46.576c-3.215,0-5.822-2.605-5.822-5.822V167.885c0-3.217,2.607-5.822,5.822-5.822h46.576   c3.215,0,5.822,2.604,5.822,5.822V340.786z M208.49,137.901c-18.618,0-33.766-15.146-33.766-33.765   c0-18.617,15.147-33.766,33.766-33.766c18.619,0,33.766,15.148,33.766,33.766C242.256,122.755,227.107,137.901,208.49,137.901z" />
+      </g>
+    </svg>
     <span id="toastMessage">Message goes here</span>
   </div>
 
   <script>
-    // Set PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    // Set PDF.js worker to local file for offline support
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
 
     let selectedFile = null;
     let unlockedBlob = null;
     let outputFilename = '';
 
     /* ── Self-Download functionality ─────────────────────── */
-    function downloadApp() {
-      // Get the full HTML content of this page
-      const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'PDF_Unlocker_App.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    function initiateOfflineSave() {
+      document.getElementById('saveOfflineBtn').classList.add('hidden');
+      document.getElementById('offlineInputGroup').classList.remove('hidden');
+      document.getElementById('appNameInput').focus();
+    }
+
+    function discardOfflineSave() {
+      document.getElementById('offlineInputGroup').classList.add('hidden');
+      document.getElementById('saveOfflineBtn').classList.remove('hidden');
+    }
+
+    async function confirmOfflineSave() {
+      const appName = document.getElementById('appNameInput').value.trim() || 'unlock_your_pdf';
+      const sanitizedFolder = appName.replace(/[^a-z0-9_\-]/gi, '_');
+
+      if (!window.showDirectoryPicker) {
+        showToast('Your browser does not support folder saving. Please use Chrome or Edge.');
+        return;
+      }
+
+      showToast(`Select where to save the "${sanitizedFolder}" folder...`);
+
+      try {
+        const parentDirHandle = await window.showDirectoryPicker();
+        const appDirHandle = await parentDirHandle.getDirectoryHandle(sanitizedFolder, { create: true });
+
+        const filesToSave = [
+          { name: 'index.html', type: 'html' },
+          { name: 'fonts.css', type: 'fetch' },
+          { name: 'jspdf.js', type: 'fetch' },
+          { name: 'pdf.js', type: 'fetch' },
+          { name: 'pdf.worker.min.js', type: 'fetch' },
+          { name: 'tailwindcss.js', type: 'fetch' }
+        ];
+
+        showToast(`Saving assets to "${sanitizedFolder}"...`);
+        for (const file of filesToSave) {
+          let content;
+          if (file.type === 'html') {
+            // Remove the offline UI from the saved version
+            const clone = document.documentElement.cloneNode(true);
+            const offlineUI = clone.querySelector('#saveOfflineContainer');
+            if (offlineUI) offlineUI.remove();
+            content = "<!DOCTYPE html>\n" + clone.outerHTML;
+          } else {
+            const response = await fetch(file.name);
+            if (!response.ok) throw new Error(`Could not fetch ${file.name}`);
+            content = await response.text();
+          }
+
+          const fileHandle = await appDirHandle.getFileHandle(file.name, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+        }
+
+        showToast(`Success! App saved to your "${sanitizedFolder}" directory.`);
+        // Reset the UI
+        document.getElementById('saveOfflineBtn').classList.remove('hidden');
+        document.getElementById('offlineInputGroup').classList.add('hidden');
+      } catch (err) {
+        console.error(err);
+        if (err.name !== 'AbortError') {
+          showToast('Error saving app. Ensure you are using a local server (http/https).');
+        }
+      }
     }
 
     /* ── Drag & Drop ─────────────────────────────── */
@@ -331,8 +535,8 @@
       try {
         const arrayBuffer = await f.arrayBuffer();
         await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        
-        showToast('The PDF file is not protected with a password, you can use it directly.');
+
+        showToast('This pdf file is not protected with a any password');
         document.getElementById('fileInput').value = '';
         return;
       } catch (err) {
@@ -370,7 +574,17 @@
     }
     function togglePassword() {
       const inp = document.getElementById('passwordInput');
-      inp.type = inp.type === 'password' ? 'text' : 'password';
+      const icon = document.getElementById('eyeIcon');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />`;
+      } else {
+        inp.type = 'password';
+        icon.innerHTML = `
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        `;
+      }
     }
     function updatePreview() {
       const v = document.getElementById('outputName').value.trim();
@@ -379,11 +593,11 @@
     function setProgress(pct, label, detail) {
       document.getElementById('progressBar').style.width = pct + '%';
       document.getElementById('progressPct').textContent = pct + '%';
-      if (label)  document.getElementById('progressLabel').textContent  = label;
+      if (label) document.getElementById('progressLabel').textContent = label;
       if (detail) document.getElementById('progressDetail').textContent = detail;
     }
     function hideAllMessages() {
-      ['successCard','errorCard','progressSection'].forEach(id => {
+      ['successCard', 'errorCard', 'progressSection'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
         if (id === 'successCard') document.getElementById(id).classList.remove('flex');
       });
@@ -403,7 +617,7 @@
       const toast = document.getElementById('toastContainer');
       document.getElementById('toastMessage').textContent = msg;
       toast.classList.add('show');
-      
+
       clearTimeout(toastTimeout);
       toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
@@ -487,6 +701,7 @@
         unlockedBlob = newPdf.output('blob');
 
         setProgress(100, 'Done', 'PDF unlocked successfully!');
+        showToast('PDF successfully unlocked and ready for download!');
         await new Promise(r => setTimeout(r, 450));
 
         document.getElementById('progressSection').classList.add('hidden');
@@ -517,4 +732,5 @@
     }
   </script>
 </body>
+
 </html>
