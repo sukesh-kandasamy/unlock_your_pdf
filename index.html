@@ -477,10 +477,35 @@
         for (const file of filesToSave) {
           let content;
           if (file.type === 'html') {
-            // Remove the offline UI from the saved version
+            // Create a clean clone for the offline version
             const clone = document.documentElement.cloneNode(true);
+
+            // 1. Remove the offline save UI entirely
             const offlineUI = clone.querySelector('#saveOfflineContainer');
             if (offlineUI) offlineUI.remove();
+
+            // 2. Hide any active toast notifications
+            const toast = clone.querySelector('#toastContainer');
+            if (toast) {
+              toast.classList.remove('show');
+              const tMsg = toast.querySelector('#toastMessage');
+              if (tMsg) tMsg.textContent = '';
+            }
+
+            // 3. Hide any active progress or success/error messages
+            const tempIds = ['progressSection', 'successCard', 'errorCard', 'passwordError', 'fileInfo'];
+            tempIds.forEach(id => {
+              const el = clone.querySelector('#' + id);
+              if (el) {
+                el.classList.add('hidden');
+                if (id === 'successCard') el.classList.remove('flex');
+              }
+            });
+
+            // 4. Clear input values for privacy
+            const inputs = clone.querySelectorAll('input');
+            inputs.forEach(inp => { if (inp.id !== 'appNameInput') inp.value = ''; });
+
             content = "<!DOCTYPE html>\n" + clone.outerHTML;
           } else {
             const response = await fetch(file.name);
