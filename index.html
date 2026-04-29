@@ -7,9 +7,11 @@
   <title>PDF Unlocker</title>
   <!-- Tailwind CSS -->
   <script src="tailwindcss.js"></script>
-  <!-- PDF.js and jsPDF -->
-  <script src="pdf.js"></script>
-  <script src="jspdf.js"></script>
+  <!-- MuPDF for high-fidelity decryption -->
+  <script type="module">
+    import * as mupdf from './mupdf.js';
+    window.mupdf = mupdf;
+  </script>
   <!-- Google Fonts: Roboto -->
   <link href="fonts.css" rel="stylesheet">
   <style>
@@ -492,8 +494,7 @@
   </div>
 
   <script>
-    // Set PDF.js worker to local file for offline support
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+
 
     let selectedFile = null;
     let unlockedBlob = null;
@@ -527,10 +528,10 @@
         const filesToSave = [
           { name: 'index.html', type: 'html' },
           { name: 'fonts.css', type: 'fetch' },
-          { name: 'jspdf.js', type: 'fetch' },
-          { name: 'pdf.js', type: 'fetch' },
-          { name: 'pdf.worker.min.js', type: 'fetch' },
-          { name: 'tailwindcss.js', type: 'fetch' }
+          { name: 'tailwindcss.js', type: 'fetch' },
+          { name: 'mupdf.js', type: 'fetch' },
+          { name: 'mupdf-wasm.js', type: 'fetch' },
+          { name: 'mupdf-wasm.wasm', type: 'fetch' }
         ];
 
         showToast(`Saving assets to "${sanitizedFolder}"...`);
@@ -619,20 +620,22 @@
       updatePreview();
 
       try {
+        if (!window.mupdf) {
+            showGeneralError('MuPDF engine is still loading. Please wait a moment.');
+            document.getElementById('fileInput').value = '';
+            return;
+        }
         const arrayBuffer = await f.arrayBuffer();
-        await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-        showToast('This pdf file is not protected with a any password');
+        const doc = window.mupdf.Document.openDocument(arrayBuffer, "application/pdf");
+        if (!doc.needsPassword()) {
+            showToast('This PDF file is not password-protected.');
+            document.getElementById('fileInput').value = '';
+            return;
+        }
+      } catch (err) {
+        showGeneralError('Invalid PDF file or it cannot be read.');
         document.getElementById('fileInput').value = '';
         return;
-      } catch (err) {
-        if (err.name === 'PasswordException' || (err.message && /password/i.test(err.message))) {
-          // It is password protected. Proceed.
-        } else {
-          showGeneralError('Invalid PDF file or it cannot be read.');
-          document.getElementById('fileInput').value = '';
-          return;
-        }
       }
 
       selectedFile = f;
@@ -725,68 +728,46 @@
 
       document.getElementById('progressSection').classList.remove('hidden');
       document.getElementById('unlockBtn').disabled = true;
-      setProgress(5, 'Reading file', 'Loading PDF into memory...');
-
+      
       try {
+        if (!window.mupdf) {
+            throw new Error('MuPDF engine is still loading. Please wait a few seconds.');
+        }
+
+        setProgress(30, 'Initializing', 'Loading PDF engine...');
         const arrayBuffer = await selectedFile.arrayBuffer();
-        setProgress(15, 'Authenticating', 'Verifying password with PDF.js...');
-
-        let pdfDoc;
-        try {
-          pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer, password }).promise;
-        } catch (err) {
-          if (err.name === 'PasswordException' || (err.message && /password/i.test(err.message))) {
-            document.getElementById('unlockBtn').disabled = false;
-            document.getElementById('progressSection').classList.add('hidden');
-            showPasswordError('Incorrect password. Please try again.');
-            return;
-          }
-          throw err;
+        
+        setProgress(60, 'Decrypting', 'Removing encryption and rebuilding PDF...');
+        
+        // Open document
+        const doc = window.mupdf.Document.openDocument(arrayBuffer, "application/pdf");
+        
+        // Authenticate
+        if (doc.needsPassword()) {
+            // authenticatePassword returns > 0 on success, 0 on failure
+            const authResult = doc.authenticatePassword(password);
+            if (authResult === 0) {
+                throw new Error('password'); // specific error for password
+            }
         }
 
-        const totalPages = pdfDoc.numPages;
-        setProgress(25, 'Decrypting', `Rendering ${totalPages} page(s)...`);
+        // Create a brand new, clean PDFDocument
+        const newDoc = new window.mupdf.PDFDocument();
+        const numPages = doc.countPages();
 
-        const { jsPDF } = window.jspdf;
-        let newPdf = null;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const RENDER_SCALE = 2; // High quality rendering
-
-        for (let i = 1; i <= totalPages; i++) {
-          const page = await pdfDoc.getPage(i);
-          const viewport = page.getViewport({ scale: RENDER_SCALE });
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          await page.render({ canvasContext: ctx, viewport }).promise;
-          const imgData = canvas.toDataURL('image/jpeg', 0.92);
-
-          const vp1 = page.getViewport({ scale: 1 });
-          const wPt = vp1.width * 72 / 96;
-          const hPt = vp1.height * 72 / 96;
-
-          if (i === 1) {
-            newPdf = new jsPDF({
-              orientation: wPt > hPt ? 'landscape' : 'portrait',
-              unit: 'pt',
-              format: [wPt, hPt]
-            });
-          } else {
-            newPdf.addPage([wPt, hPt], wPt > hPt ? 'landscape' : 'portrait');
-          }
-
-          newPdf.addImage(imgData, 'JPEG', 0, 0, wPt, hPt);
-
-          const pct = Math.round(25 + (i / totalPages) * 65);
-          setProgress(pct, 'Processing', `Decrypted page ${i} of ${totalPages}`);
+        // Graft all pages from the decrypted source document to the new clean document
+        // This effectively copies all content (text, vectors, images) into a fresh shell.
+        for (let i = 0; i < numPages; i++) {
+            newDoc.graftPage(newDoc.countPages(), doc, i);
         }
 
-        setProgress(95, 'Finalizing', 'Creating unlocked document...');
-        unlockedBlob = newPdf.output('blob');
+        // Save the new unencrypted document to buffer
+        const outputBuffer = newDoc.saveToBuffer("clean,garbage=1");
+        const outputData = outputBuffer.asUint8Array();
+        
+        unlockedBlob = new Blob([outputData], { type: 'application/pdf' });
 
-        setProgress(100, 'Done', 'PDF unlocked successfully!');
+        setProgress(100, 'Done', 'PDF successfully unlocked!');
         showToast('PDF successfully unlocked and ready for download!');
         await new Promise(r => setTimeout(r, 450));
 
@@ -796,9 +777,15 @@
         document.getElementById('successCard').classList.add('flex');
 
       } catch (err) {
-        console.error(err);
+        console.error('MuPDF Error:', err);
         document.getElementById('progressSection').classList.add('hidden');
-        showGeneralError(err.message || 'An error occurred. Check if the file is a valid PDF.');
+        if (err.message === 'password') {
+           showPasswordError('Incorrect password. Please check and try again.');
+        } else if (err.message.includes('loading')) {
+           showGeneralError(err.message);
+        } else {
+           showGeneralError('Could not process this PDF. It might use an unsupported format.');
+        }
       } finally {
         document.getElementById('unlockBtn').disabled = false;
       }
