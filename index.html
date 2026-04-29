@@ -137,11 +137,48 @@
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       z-index: 100;
       pointer-events: none;
+      width: max-content;
+      max-width: 90vw;
     }
 
     #toastContainer.show {
       transform: translateX(-50%) translateY(0);
       opacity: 1;
+    }
+
+    @media (max-width: 640px) {
+      #toastContainer {
+        width: calc(100% - 32px);
+        left: 16px;
+        transform: translateY(100px);
+        max-width: none;
+      }
+
+      #toastContainer.show {
+        transform: translateY(0);
+      }
+    }
+
+    /* Modal Styles */
+    .modal-backdrop {
+      background: rgba(32, 33, 36, 0.6);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes modalSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     /* Password eye toggle visibility */
@@ -193,7 +230,7 @@
       </div>
       <div>
         <div id="saveOfflineContainer" class="flex items-center gap-2">
-          <button id="saveOfflineBtn" onclick="initiateOfflineSave()"
+          <button id="saveOfflineBtn" onclick="openSaveModal()"
             class="google-btn-outline px-4 py-2 rounded font-medium text-sm flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg">
@@ -202,26 +239,51 @@
             </svg>
             Save App Offline
           </button>
-          <div id="offlineInputGroup" class="hidden flex items-center gap-2 animate-fade-in">
-            <input type="text" id="appNameInput" placeholder="App Name"
-              class="google-input px-3 py-2 text-sm w-44 shadow-sm" value="unlock_your_pdf">
-            <div class="flex items-center gap-1">
-              <button onclick="confirmOfflineSave()" class="google-btn px-4 py-2 rounded font-medium text-sm shadow-sm"
-                title="Download app files">
-                Download
-              </button>
-              <button onclick="discardOfflineSave()"
-                class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Discard">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   </header>
+
+  <!-- Save Offline Modal -->
+  <div id="saveModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0" onclick="closeSaveModal()"></div>
+    <div class="modal-content relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+      <div class="p-6">
+        <h3 class="text-xl font-semibold text-gray-900 mb-2 font-outfit">Save App Offline</h3>
+        <p class="text-gray-500 text-sm mb-6">Enter a name for your offline app folder. This will contain all necessary
+          files to run the app without an internet connection.</p>
+
+        <div class="space-y-4">
+          <div>
+            <label for="appNameInput" class="block text-sm font-medium text-gray-700 mb-1">Folder Name</label>
+            <input type="text" id="appNameInput" placeholder="App Name"
+              class="google-input w-full px-4 py-3 text-sm shadow-sm" value="unlock_your_pdf">
+          </div>
+
+          <div class="bg-blue-50 rounded-lg p-3 flex gap-3">
+            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-xs text-blue-700 leading-normal">
+              You will be prompted to select a directory on your computer to save the app files.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-50 px-6 py-4 flex flex-row-reverse gap-3">
+        <button onclick="confirmOfflineSave()" class="google-btn px-6 py-2.5 rounded-lg font-medium text-sm shadow-sm">
+          Download Files
+        </button>
+        <button onclick="closeSaveModal()"
+          class="px-6 py-2.5 rounded-lg font-medium text-sm text-gray-600 hover:bg-gray-200 transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Main Content -->
   <main class="flex-grow flex flex-col items-center p-4 sm:p-8">
@@ -438,15 +500,13 @@
     let outputFilename = '';
 
     /* ── Self-Download functionality ─────────────────────── */
-    function initiateOfflineSave() {
-      document.getElementById('saveOfflineBtn').classList.add('hidden');
-      document.getElementById('offlineInputGroup').classList.remove('hidden');
+    function openSaveModal() {
+      document.getElementById('saveModal').classList.remove('hidden');
       document.getElementById('appNameInput').focus();
     }
 
-    function discardOfflineSave() {
-      document.getElementById('offlineInputGroup').classList.add('hidden');
-      document.getElementById('saveOfflineBtn').classList.remove('hidden');
+    function closeSaveModal() {
+      document.getElementById('saveModal').classList.add('hidden');
     }
 
     async function confirmOfflineSave() {
@@ -483,6 +543,8 @@
             // 1. Remove the offline save UI entirely
             const offlineUI = clone.querySelector('#saveOfflineContainer');
             if (offlineUI) offlineUI.remove();
+            const saveModal = clone.querySelector('#saveModal');
+            if (saveModal) saveModal.remove();
 
             // 2. Hide any active toast notifications
             const toast = clone.querySelector('#toastContainer');
@@ -521,8 +583,7 @@
 
         showToast(`Success! App saved to your "${sanitizedFolder}" directory.`);
         // Reset the UI
-        document.getElementById('saveOfflineBtn').classList.remove('hidden');
-        document.getElementById('offlineInputGroup').classList.add('hidden');
+        closeSaveModal();
       } catch (err) {
         console.error(err);
         if (err.name !== 'AbortError') {
